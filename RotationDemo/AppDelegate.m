@@ -20,11 +20,13 @@
     self.window = [[UIWindow alloc]initWithFrame:[UIScreen mainScreen].bounds];
     self.window.rootViewController = [ViewController new];
     [self.window makeKeyAndVisible];
+    NSLog(@"didFinishLaunchingWithOptions : %@",self.window);
     return YES;
 }
 
 
 - (UIInterfaceOrientationMask)application:(UIApplication *)application supportedInterfaceOrientationsForWindow:(UIWindow *)window {
+    NSLog(@"supportedInterfaceOrientationsForWindow window %@",window);
     return UIInterfaceOrientationMaskAllButUpsideDown;
 }
 

@@ -29,10 +29,17 @@
     [super viewDidLoad];
     
     self.view.backgroundColor = [UIColor lightGrayColor];
+    UILabel *titlelb = [[UILabel alloc]init];
+    titlelb.text = @"点我";
+    titlelb.textColor = [UIColor whiteColor];
+    titlelb.font = [UIFont systemFontOfSize:22];
+    titlelb.textAlignment = NSTextAlignmentCenter;
     
     // 要旋转的UIView
-    self.playerView = [[UIView alloc]initWithFrame:CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, 400)];
+    self.playerView = [[UIView alloc]initWithFrame:CGRectMake(0, 200, [UIScreen mainScreen].bounds.size.width, 400)];
     self.playerView.backgroundColor = [UIColor redColor];
+    titlelb.frame = self.playerView.bounds;
+    [self.playerView addSubview:titlelb];
 
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc]initWithTarget:self action:@selector(fullScreen)];
     [self.playerView addGestureRecognizer:tap];
@@ -42,12 +49,13 @@
     self.rotationManager = [[LERotationManager alloc]init];
     // 设置要旋转的UIView
     self.rotationManager.target = self.playerView;
+    
 }
+
 
 - (void)fullScreen {
     // 调用旋转方法
     [self.rotationManager rotate];
 }
-
 
 @end

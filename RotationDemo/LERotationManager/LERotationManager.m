@@ -153,7 +153,6 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
 
 
 
-
 #pragma mark - Navigation
 @class FullScreenModelNavigationController;
 @protocol FullScreenModelNavigationControllerDelegate<NSObject>
@@ -291,6 +290,7 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
     bounds = self.bounds;
     self.rootViewController.view.frame = bounds;
 }
+
 @end
 
 
@@ -301,6 +301,7 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
 @property (nonatomic, weak  ) UIWindow  *previousKeyWindow;
 
 @property (nonatomic, assign) CGRect  targetOriginRect;
+@property (nonatomic, assign) CGRect  targetForWindowOriginRect;
 @property (nonatomic, assign,getter=isInactivated) BOOL  inactivated;
 @property (nonatomic, assign,getter=isForcedRotation) BOOL  forcedRotation;
 @property (nonatomic, assign,getter=isTransitioning) BOOL  transitioning;
@@ -363,15 +364,6 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
 }
 
 
-/// 设置要旋转的View
-/// @param target target
-- (void)setTarget:(UIView *)target {
-    _target = target;
-    _superView = target.superview;
-    _targetOriginRect = target.frame;
-}
-
-
 #pragma mark - Action
 /// 设备已旋转
 /// @param noti noti
@@ -390,7 +382,7 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
     }
 }
 
-/// 设备将进入后台，非活跃专题
+/// 设备将进入后台，非活跃状态
 - (void)willResignActive {
     self.inactivated = YES;
 }
@@ -451,6 +443,8 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
 
 - (void)rotate:(LEOrientation)orientation animated:(BOOL)animated completionHandler:(void (^)(id<LERotationManagerDelegate> _Nullable))completionHandler {
     _completionHandler = completionHandler;
+    [self saveTargetOriginRect];
+    
     if (orientation == (NSInteger)self.window.fullScreenModelVC.currentOrientation) {
         [self _finishTransition];
         return;
@@ -463,6 +457,19 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
     [UIDevice.currentDevice setValue:@(orientation) forKey:@"orientation"];
 }
 
+ 
+#pragma mark - 配置target全屏前的各种frame
+- (void)saveTargetOriginRect {
+    if (!_superView) {
+        // target的superView
+        self.superView = self.target.superview;
+        // target竖屏时的frame
+        self.targetOriginRect = self.target.frame;
+        // target竖屏时，在所在window的frame
+        self.targetForWindowOriginRect = [self.target convertRect:self.target.bounds toView:self.target.superview.window];
+    }
+}
+
 
 #pragma mark - FullScreenModelViewControllerDelegate
 - (CGRect)targetOriginFrame {
@@ -473,9 +480,8 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
     /// 计算self.superView在self.superView.window上的坐标
     /// 等价于下面的另外一种写法
     /// [self.superView.window convertRect:self.superView.bounds fromView:self.superView]
-//    CGRect rect = [self.superView convertRect:self.superView.bounds toView:self.superView.window];
-//    NSLog(@"targetOriginFrame: %@",NSStringFromCGRect(self.targetOriginRect));
-    return self.targetOriginRect;
+    /// 这里返回的是target对于原来Window的frame，用于两个window切换的时候，过渡效果好点
+    return self.targetForWindowOriginRect;
 }
 
 
@@ -561,7 +567,9 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
     if (!vc.isFullScreen) {
         // 全屏转小屏
         dispatch_async(dispatch_get_main_queue(), ^{
+            self.target.frame = self.targetOriginRect;
             [self.superView addSubview:self.target];
+            
             UIWindow *previousKeyWindow = self.previousKeyWindow?:[self currentKeyWindow];
             [previousKeyWindow makeKeyAndVisible];
             self.previousKeyWindow = nil;
@@ -614,12 +622,7 @@ static NSNotificationName const RotationManagerTransitioningValueDidChangeNotifi
 
 /// 获取keyWindow
 - (UIWindow *)currentKeyWindow {
-    if (@available(iOS 13.0,*)) {
-        UIWindow *keyWindow = [UIApplication.sharedApplication.windows objectAtIndex:0];
-        return keyWindow;
-    }else{
-        return UIApplication.sharedApplication.keyWindow;
-    }
+    return self.superView.window;
 }
 
 
